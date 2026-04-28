@@ -629,6 +629,8 @@ function App() {
   const [loadedSource, setLoadedSource] = useState(SAMPLE_PROGRAMS.add.code);
   const [loadedTitle, setLoadedTitle] = useState(SAMPLE_PROGRAMS.add.title);
   const [aiPrompt, setAiPrompt] = useState(SAMPLE_PROGRAMS.add.prompt);
+  const [activeSidebar, setActiveSidebar] = useState('samples');
+  const [sampleFilter, setSampleFilter] = useState('all');
   const [messages, setMessages] = useState([
     { role: 'assistant', text: 'Ask me for a small CPU program, then load it into the visualizer.' }
   ]);
@@ -668,6 +670,44 @@ function App() {
         ? cpu.lastChange.description
         : 'Waiting for a LOAD or STORE instruction.';
   const cacheRouteLabels = cacheMode === 'store' ? ['REG', 'L1', 'RAM'] : ['RAM', 'L1', 'REG'];
+  const sampleEntries = Object.entries(SAMPLE_PROGRAMS);
+  const visibleSamples = sampleEntries.filter(([, sample]) => sampleFilter === 'all' || sample.difficulty === sampleFilter);
+  const currentSample = sampleEntries.find(([, sample]) => sample.title === loadedTitle)?.[1];
+  const programFeedRows = traceLines.map((line) => {
+    const runs = executedLineCounts[line.number] || 0;
+    const active = activeLineNumber === line.number;
+    const executable = line.kind === 'instruction';
+    const status = active
+      ? PHASE_DETAILS[activePhase].title
+      : runs
+        ? `${runs} run${runs === 1 ? '' : 's'}`
+        : line.kind === 'memory'
+          ? 'RAM init'
+          : line.kind === 'label'
+            ? 'Label'
+            : line.kind === 'comment'
+              ? 'Comment'
+              : '';
+    const detail = active
+      ? `${PHASE_DETAILS[activePhase].subtitle}: ${line.instruction?.clean || currentInstruction?.clean || 'waiting'}${cachePathActive ? ` | ${cachePathText}` : ''}`
+      : runs
+        ? `Already executed ${runs} time${runs === 1 ? '' : 's'}.`
+        : executable
+          ? `Instruction ${line.instruction.op} is waiting for the Program Counter.`
+          : line.kind === 'memory'
+            ? 'Initial memory value loaded before execution starts.'
+            : line.kind === 'label'
+              ? 'A jump target for branch or loop instructions.'
+              : '';
+
+    return {
+      ...line,
+      active,
+      runs,
+      status,
+      detail
+    };
+  });
 
   function resetCpu(nextProgram = program) {
     setAutoRun(false);
@@ -803,6 +843,8 @@ function App() {
         </div>
 
         <div className="top-actions">
+          <span className={cpu.halted ? 'halted' : 'live'}>{cpu.halted ? 'Halted' : 'Live Execution'}</span>
+          <button type="button" onClick={() => resetCpu()}>Reset</button>
           <label className="mode-toggle">
             <input type="checkbox" checked={beginnerMode} onChange={(event) => setBeginnerMode(event.target.checked)} />
             Beginner Mode
@@ -816,75 +858,106 @@ function App() {
       </header>
 
       <main className="workspace">
-        <aside className="panel assistant-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">AI Code Assistant</p>
-              <h2>Generate CPU Code</h2>
-            </div>
-            <span className="status-dot">OpenAI optional</span>
+        <aside className="panel sidebar-panel">
+          <div className="sidebar-tabs" role="tablist" aria-label="Tool selector">
+            <button className={activeSidebar === 'samples' ? 'active' : ''} type="button" onClick={() => setActiveSidebar('samples')}>Samples</button>
+            <button className={activeSidebar === 'assistant' ? 'active' : ''} type="button" onClick={() => setActiveSidebar('assistant')}>AI Assistant</button>
+            <button className={activeSidebar === 'program' ? 'active' : ''} type="button" onClick={() => setActiveSidebar('program')}>Program</button>
           </div>
 
-          <div className="message-list" aria-live="polite">
-            {messages.map((message, index) => (
-              <div className={`message ${message.role}`} key={`${message.role}-${index}`}>
-                {message.text}
+          {activeSidebar === 'samples' && (
+            <section className="sidebar-section">
+              <div className="section-title">
+                <span>Sample Programs</span>
+                <small>{visibleSamples.length}</small>
               </div>
-            ))}
-          </div>
+              <select value={sampleFilter} onChange={(event) => setSampleFilter(event.target.value)} aria-label="Filter sample programs">
+                <option value="all">All Samples</option>
+                <option value="Starter">Starter</option>
+                <option value="Builder">Builder</option>
+                <option value="Branching">Branching</option>
+                <option value="Looping">Looping</option>
+              </select>
+              <div className="sample-grid">
+                {visibleSamples.map(([key, sample]) => (
+                  <button
+                    className={`sample-button ${loadedTitle === sample.title ? 'active' : ''}`}
+                    key={key}
+                    type="button"
+                    onClick={() => loadSample(key)}
+                  >
+                    <strong>{sample.title}</strong>
+                    <span>{sample.description}</span>
+                    <small>{sample.difficulty}</small>
+                  </button>
+                ))}
+              </div>
+              <button className="add-program-button" type="button" onClick={() => setActiveSidebar('program')}>+ Add Custom Program</button>
+            </section>
+          )}
 
-          <form className="prompt-box" onSubmit={generateProgram}>
-            <textarea
-              value={aiPrompt}
-              onChange={(event) => setAiPrompt(event.target.value)}
-              placeholder="Ask for a program, for example: add two numbers and store the result"
-              rows={4}
-            />
-            <button type="submit" disabled={isGenerating}>{isGenerating ? 'Generating...' : 'Generate'}</button>
-          </form>
+          {activeSidebar === 'assistant' && (
+            <section className="sidebar-section">
+              <div className="section-title">
+                <span>AI Code Assistant</span>
+                <small>OpenAI optional</small>
+              </div>
+              <div className="message-list" aria-live="polite">
+                {messages.map((message, index) => (
+                  <div className={`message ${message.role}`} key={`${message.role}-${index}`}>
+                    {message.text}
+                  </div>
+                ))}
+              </div>
+              <form className="prompt-box" onSubmit={generateProgram}>
+                <textarea
+                  value={aiPrompt}
+                  onChange={(event) => setAiPrompt(event.target.value)}
+                  placeholder="Ask for a program, for example: add two numbers and store the result"
+                  rows={4}
+                />
+                <button type="submit" disabled={isGenerating}>{isGenerating ? 'Generating...' : 'Generate'}</button>
+              </form>
+              <button className="secondary-button" type="button" onClick={explainCurrentCode}>Explain Current Step</button>
+            </section>
+          )}
 
-          <button className="secondary-button" type="button" onClick={explainCurrentCode}>Explain Current Step</button>
+          {activeSidebar === 'program' && (
+            <section className="sidebar-section">
+              <div className="section-title">
+                <span>Program Draft</span>
+                {hasUnloadedEdits && <small>Not loaded</small>}
+              </div>
+              <textarea
+                className="code-editor"
+                value={programText}
+                onChange={(event) => setProgramText(event.target.value)}
+                spellCheck="false"
+              />
+              <button className="load-program-button" type="button" onClick={() => loadProgram(loadedTitle)} disabled={editorProgram.errors.length > 0}>Load Into CPU</button>
+              {editorProgram.errors.length > 0 && (
+                <div className="error-box">
+                  {editorProgram.errors.map((error) => <p key={error}>{error}</p>)}
+                </div>
+              )}
+            </section>
+          )}
 
-          <section className="sample-card">
-            <div className="sample-card-heading">
-              <span>Prebuilt Samples</span>
-              <small>Click one to load it</small>
+          <section className="program-info-card">
+            <div className="section-title">
+              <span>Program Info</span>
             </div>
-            <div className="sample-grid">
-              {Object.entries(SAMPLE_PROGRAMS).map(([key, sample]) => (
-                <button
-                  className={`sample-button ${loadedTitle === sample.title ? 'active' : ''}`}
-                  key={key}
-                  type="button"
-                  onClick={() => loadSample(key)}
-                >
-                  <strong>{sample.title}</strong>
-                  <span>{sample.description}</span>
-                  <small>{sample.difficulty}</small>
-                </button>
-              ))}
-            </div>
+            <dl>
+              <div><dt>Program:</dt><dd>{loadedTitle}</dd></div>
+              <div><dt>Instructions:</dt><dd>{program.instructions.length}</dd></div>
+              <div><dt>Cycles:</dt><dd>{cpu.cycles}</dd></div>
+              <div><dt>Description:</dt><dd>{currentSample?.description || 'Custom program loaded into the teaching CPU.'}</dd></div>
+            </dl>
           </section>
 
-          <section className="code-card">
-            <div className="code-card-heading">
-              <span>
-                Program Draft
-                {hasUnloadedEdits && <small className="draft-status">Not loaded yet</small>}
-              </span>
-              <button type="button" onClick={() => loadProgram(loadedTitle)} disabled={editorProgram.errors.length > 0}>Load Into CPU</button>
-            </div>
-            <textarea
-              className="code-editor"
-              value={programText}
-              onChange={(event) => setProgramText(event.target.value)}
-              spellCheck="false"
-            />
-            {editorProgram.errors.length > 0 && (
-              <div className="error-box">
-                {editorProgram.errors.map((error) => <p key={error}>{error}</p>)}
-              </div>
-            )}
+          <section className="tip-card">
+            <strong>Tip</strong>
+            <p>Select a sample to see it visualized step-by-step.</p>
           </section>
         </aside>
 
@@ -892,12 +965,7 @@ function App() {
           <section className="panel cpu-panel">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">CPU Architecture</p>
                 <h1>{loadedTitle}</h1>
-              </div>
-              <div className="run-state">
-                <span className={cpu.halted ? 'halted' : 'live'}>{cpu.halted ? 'Halted' : 'Live Execution'}</span>
-                <button type="button" onClick={() => resetCpu()}>Reset</button>
               </div>
             </div>
 
@@ -987,16 +1055,6 @@ function App() {
               <span>Use the ? markers on each CPU part to explain what that part does while the loaded program is running.</span>
             </div>
 
-            <div className={`data-movement-card ${cpu.lastChange ? 'active' : ''}`}>
-              <span>Latest Data Movement</span>
-              <strong>{cpu.lastChange?.title || 'No register or memory write yet'}</strong>
-              <p>{cpu.lastChange?.description || 'Step through an instruction such as LOAD or ADD to see where the data is written.'}</p>
-              <div className={`cache-path-callout ${cachePathActive ? 'active' : ''}`}>
-                <b>L1 cache path</b>
-                <small>{cachePathText}</small>
-              </div>
-            </div>
-
             <div className={`memory-card ${activePhase === 'writeBack' ? 'active' : ''} ${cachePathActive ? 'cache-linked' : ''}`}>
               <div className="memory-heading">
                 <div className="component-heading">
@@ -1022,51 +1080,27 @@ function App() {
             </div>
           </section>
 
-          <section className="panel trace-panel">
+          <section className="panel execution-feed-panel">
             <div className="panel-heading compact">
               <div>
-                <p className="eyebrow">Loaded Program Trace</p>
-                <h2>The CPU follows this source line by line</h2>
+                <p className="eyebrow">Execution Feed</p>
+                <h2>Loaded Program Trace</h2>
               </div>
               <span className="line-pill">{cpu.halted ? 'Program halted' : activeLineNumber ? `Line ${activeLineNumber}` : 'Ready'}</span>
             </div>
 
-            <div className="trace-summary">
-              <div>
-                <span>Current source line</span>
-                <strong>{currentInstruction?.raw || 'No executable instruction'}</strong>
-              </div>
-              <div>
-                <span>CPU phase</span>
-                <strong>{PHASE_DETAILS[activePhase].title}</strong>
-              </div>
-            </div>
-
-            <div className="trace-list" aria-label="Loaded program line trace">
-              {traceLines.map((line) => {
-                const isActive = activeLineNumber === line.number;
-                const executedCount = executedLineCounts[line.number] || 0;
-                const meta = isActive
-                  ? PHASE_DETAILS[activePhase].title
-                  : executedCount
-                    ? `${executedCount} run${executedCount === 1 ? '' : 's'}`
-                    : line.kind === 'memory'
-                      ? 'RAM init'
-                      : line.kind === 'label'
-                        ? 'Label'
-                        : '';
-
-                return (
-                  <div className={`trace-line ${line.kind} ${isActive ? 'current' : ''} ${executedCount ? 'executed' : ''}`} key={`line-${line.number}`}>
-                    <span className="trace-gutter">{isActive ? '->' : line.number}</span>
-                    <code>{line.text || ' '}</code>
-                    <span className="trace-meta">{meta}</span>
-                  </div>
-                );
-              })}
+            <div className="execution-feed">
+              {programFeedRows.map((item) => (
+                <article className={`feed-row source-line ${item.kind} ${item.active ? 'active' : ''} ${item.runs ? 'executed' : ''}`} key={`feed-line-${item.number}`}>
+                  <div className="feed-step-dot">{item.active ? '>' : item.number}</div>
+                  <strong>Line {item.number}</strong>
+                  <span>{item.status}</span>
+                  <code className="program-source">{item.text || ' '}</code>
+                  <small>{item.detail}</small>
+                </article>
+              ))}
             </div>
           </section>
-
         </section>
 
         <aside className="panel explanation-panel">
@@ -1115,11 +1149,6 @@ function App() {
         </aside>
       </main>
 
-      <footer className="statusbar">
-        <span>Program: {loadedTitle}</span>
-        <span>Line {activeLineNumber || '-'}: {currentInstruction?.clean || 'None'}</span>
-        <span>Cycles: {cpu.cycles}</span>
-      </footer>
     </div>
   );
 }

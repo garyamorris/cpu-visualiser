@@ -17,8 +17,9 @@ The browser never receives your OpenAI API key. Add it to a local `.env` file:
 
 ```bash
 OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_MODEL=gpt-4.1-mini
 ```
+
+AI generation uses `gpt-5.4-mini`.
 
 If no key is configured, the app uses a local teaching example so the visualizer still works.
 
