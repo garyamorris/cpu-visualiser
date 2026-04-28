@@ -3,15 +3,26 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import OpenAI from 'openai';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = Number(process.env.PORT || 5173);
+const host = process.env.HOST || '127.0.0.1';
 const production = process.argv.includes('--production') || process.env.NODE_ENV === 'production';
-const openAiModel = 'gpt-4.1';
+const openAiModel = process.env.OPENAI_MODEL || 'gpt-4.1';
 
-app.use(express.json({ limit: '1mb' }));
+app.disable('x-powered-by');
+app.use(express.json({ limit: '32kb' }));
+
+const generateLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: Number(process.env.GENERATE_RATE_LIMIT || 10),
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { error: 'Too many generation requests. Please wait a minute and try again.' }
+});
 
 const systemPrompt = `You generate tiny programs for a teaching CPU simulator.
 Return only valid JSON with this shape:
@@ -38,11 +49,15 @@ function stripJsonFence(text) {
   return text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
 }
 
-app.post('/api/generate', async (req, res) => {
+app.post('/api/generate', generateLimiter, async (req, res) => {
   const prompt = String(req.body?.prompt || '').trim();
 
   if (!prompt) {
     return res.status(400).json({ error: 'Enter a short description of the program you want.' });
+  }
+
+  if (prompt.length > 500) {
+    return res.status(400).json({ error: 'Prompt is too long. Keep it under 500 characters.' });
   }
 
   if (!process.env.OPENAI_API_KEY) {
@@ -78,6 +93,10 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, openAiConfigured: Boolean(process.env.OPENAI_API_KEY) });
+});
+
 if (!production) {
   const { createServer } = await import('vite');
   const vite = await createServer({
@@ -97,6 +116,6 @@ if (!production) {
   }
 }
 
-app.listen(port, () => {
-  console.log(`CPU Visualizer running at http://localhost:${port}`);
+app.listen(port, host, () => {
+  console.log(`CPU Visualizer running at http://${host}:${port}`);
 });
