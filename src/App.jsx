@@ -612,9 +612,9 @@ function fallbackProgram(prompt) {
   return SAMPLE_PROGRAMS.add;
 }
 
-function InfoTip({ title, text, side = 'top' }) {
+function InfoTip({ title, text, className = '' }) {
   return (
-    <span className={`info-tip ${side}`} tabIndex="0" aria-label={`${title}: ${text}`}>
+    <span className={`info-tip ${className}`} tabIndex="0" aria-label={`${title}: ${text}`}>
       <span className="info-dot">?</span>
       <span className="info-popover" role="tooltip">
         <strong>{title}</strong>
@@ -843,26 +843,31 @@ function App() {
         </div>
 
         <div className="top-actions">
-          <span className={cpu.halted ? 'halted' : 'live'}>{cpu.halted ? 'Halted' : 'Live Execution'}</span>
-          <button type="button" onClick={() => resetCpu()}>Reset</button>
+          <span className={cpu.halted ? 'halted' : 'live'}>{cpu.halted ? 'Halted' : 'Live Execution'} <InfoTip className="inline" title="Execution Status" text="Shows whether the CPU is still running instructions or has reached HALT." /></span>
+          <button type="button" onClick={() => resetCpu()}>Reset <InfoTip className="button-tip" title="Reset" text="Restarts the loaded program with registers, memory and counters reset to their initial state." /></button>
           <label className="mode-toggle">
             <input type="checkbox" checked={beginnerMode} onChange={(event) => setBeginnerMode(event.target.checked)} />
             Beginner Mode
+            <InfoTip className="inline" title="Beginner Mode" text="Adds plain-English explanations to each CPU step for first-time learners." />
           </label>
-          <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Animation speed">
-            <option value="1200">0.75x</option>
-            <option value="900">1.0x</option>
-            <option value="550">1.5x</option>
-          </select>
+          <label className="speed-select">
+            <span>Speed</span>
+            <select value={speed} onChange={(event) => setSpeed(Number(event.target.value))} aria-label="Animation speed">
+              <option value="1200">0.75x</option>
+              <option value="900">1.0x</option>
+              <option value="550">1.5x</option>
+            </select>
+            <InfoTip className="inline" title="Speed" text="Controls how quickly Auto mode advances through Fetch, Decode, Execute and Write Back." />
+          </label>
         </div>
       </header>
 
       <main className="workspace">
         <aside className="panel sidebar-panel">
           <div className="sidebar-tabs" role="tablist" aria-label="Tool selector">
-            <button className={activeSidebar === 'samples' ? 'active' : ''} type="button" onClick={() => setActiveSidebar('samples')}>Samples</button>
-            <button className={activeSidebar === 'assistant' ? 'active' : ''} type="button" onClick={() => setActiveSidebar('assistant')}>AI Assistant</button>
-            <button className={activeSidebar === 'program' ? 'active' : ''} type="button" onClick={() => setActiveSidebar('program')}>Program</button>
+            <button className={activeSidebar === 'samples' ? 'active' : ''} type="button" onClick={() => setActiveSidebar('samples')}>Samples <InfoTip className="button-tip" title="Samples" text="Load ready-made programs that demonstrate memory, ALU, branch and loop behavior." /></button>
+            <button className={activeSidebar === 'assistant' ? 'active' : ''} type="button" onClick={() => setActiveSidebar('assistant')}>AI Assistant <InfoTip className="button-tip" title="AI Assistant" text="Ask OpenAI to generate a small teaching CPU program, then step through it visually." /></button>
+            <button className={activeSidebar === 'program' ? 'active' : ''} type="button" onClick={() => setActiveSidebar('program')}>Program <InfoTip className="button-tip" title="Program Editor" text="Edit assembly code directly and load it into the simulated CPU." /></button>
           </div>
 
           {activeSidebar === 'samples' && (
@@ -870,6 +875,7 @@ function App() {
               <div className="section-title">
                 <span>Sample Programs</span>
                 <small>{visibleSamples.length}</small>
+                <InfoTip className="inline" title="Sample Programs" text="These programs are intentionally small so students can follow each instruction line by line." />
               </div>
               <select value={sampleFilter} onChange={(event) => setSampleFilter(event.target.value)} aria-label="Filter sample programs">
                 <option value="all">All Samples</option>
@@ -892,7 +898,7 @@ function App() {
                   </button>
                 ))}
               </div>
-              <button className="add-program-button" type="button" onClick={() => setActiveSidebar('program')}>+ Add Custom Program</button>
+              <button className="add-program-button" type="button" onClick={() => setActiveSidebar('program')}>+ Add Custom Program <InfoTip className="button-tip" title="Custom Program" text="Switches to the editor so you can paste or write your own CPU assembly." /></button>
             </section>
           )}
 
@@ -901,6 +907,7 @@ function App() {
               <div className="section-title">
                 <span>AI Code Assistant</span>
                 <small>OpenAI optional</small>
+                <InfoTip className="inline" title="AI Generation" text="The server sends your prompt to OpenAI using gpt-4.1 when an API key is configured." />
               </div>
               <div className="message-list" aria-live="polite">
                 {messages.map((message, index) => (
@@ -918,7 +925,7 @@ function App() {
                 />
                 <button type="submit" disabled={isGenerating}>{isGenerating ? 'Generating...' : 'Generate'}</button>
               </form>
-              <button className="secondary-button" type="button" onClick={explainCurrentCode}>Explain Current Step</button>
+              <button className="secondary-button" type="button" onClick={explainCurrentCode}>Explain Current Step <InfoTip className="button-tip" title="Explain Current Step" text="Adds a plain-language explanation for the source line currently highlighted in the trace." /></button>
             </section>
           )}
 
@@ -927,6 +934,7 @@ function App() {
               <div className="section-title">
                 <span>Program Draft</span>
                 {hasUnloadedEdits && <small>Not loaded</small>}
+                <InfoTip className="inline" title="Program Draft" text="Editing here does not affect the CPU until you press Load Into CPU." />
               </div>
               <textarea
                 className="code-editor"
@@ -934,7 +942,7 @@ function App() {
                 onChange={(event) => setProgramText(event.target.value)}
                 spellCheck="false"
               />
-              <button className="load-program-button" type="button" onClick={() => loadProgram(loadedTitle)} disabled={editorProgram.errors.length > 0}>Load Into CPU</button>
+              <button className="load-program-button" type="button" onClick={() => loadProgram(loadedTitle)} disabled={editorProgram.errors.length > 0}>Load Into CPU <InfoTip className="button-tip" title="Load Into CPU" text="Parses the draft code, initializes memory, and resets the CPU to the first instruction." /></button>
               {editorProgram.errors.length > 0 && (
                 <div className="error-box">
                   {editorProgram.errors.map((error) => <p key={error}>{error}</p>)}
@@ -946,6 +954,7 @@ function App() {
           <section className="program-info-card">
             <div className="section-title">
               <span>Program Info</span>
+              <InfoTip className="inline" title="Program Info" text="Quick summary of the loaded program and how far the CPU has progressed." />
             </div>
             <dl>
               <div><dt>Program:</dt><dd>{loadedTitle}</dd></div>
@@ -956,7 +965,7 @@ function App() {
           </section>
 
           <section className="tip-card">
-            <strong>Tip</strong>
+            <strong>Tip <InfoTip className="inline" title="Teaching Tip" text="Start with Load A Number, then move to Add Two Numbers before introducing branches and loops." /></strong>
             <p>Select a sample to see it visualized step-by-step.</p>
           </section>
         </aside>
@@ -970,15 +979,17 @@ function App() {
             </div>
 
             <div className="controls cpu-controls">
-              <button type="button" onClick={() => resetCpu()} aria-label="Restart program">Restart</button>
+              <button type="button" onClick={() => resetCpu()} aria-label="Restart program">Restart <InfoTip className="button-tip" title="Restart" text="Returns to the start of the loaded program without changing the selected sample or editor text." /></button>
               <button type="button" onClick={() => setAutoRun((value) => !value)} disabled={cpu.halted || program.errors.length > 0}>
                 {autoRun ? 'Pause' : 'Play'}
+                <InfoTip className="button-tip" title="Play / Pause" text="Automatically advances through CPU phases until you pause or the program halts." />
               </button>
-              <button type="button" onClick={stepCpu} disabled={cpu.halted || program.errors.length > 0}>Step Phase</button>
-              <button className="primary-button" type="button" onClick={stepLine} disabled={cpu.halted || program.errors.length > 0}>Next Line</button>
+              <button type="button" onClick={stepCpu} disabled={cpu.halted || program.errors.length > 0}>Step Phase <InfoTip className="button-tip" title="Step Phase" text="Moves one CPU phase at a time: Fetch, Decode, Execute, then Write Back." /></button>
+              <button className="primary-button" type="button" onClick={stepLine} disabled={cpu.halted || program.errors.length > 0}>Next Line <InfoTip className="button-tip" title="Next Line" text="Runs the current source instruction through all CPU phases and highlights the next instruction line." /></button>
               <label className="auto-toggle">
                 <input type="checkbox" checked={autoRun} onChange={(event) => setAutoRun(event.target.checked)} disabled={cpu.halted || program.errors.length > 0} />
                 Auto
+                <InfoTip className="inline" title="Auto Mode" text="Keeps stepping through phases using the selected speed until the program stops." />
               </label>
             </div>
 
@@ -1045,9 +1056,9 @@ function App() {
             </div>
 
             <div className="flow-legend" aria-label="CPU flow legend">
-              <span><i className="control-line" /> Control signal</span>
-              <span><i className="instruction-line" /> Instruction flow</span>
-              <span><i className="data-line" /> Data flow</span>
+              <span><i className="control-line" /> Control signal <InfoTip className="inline" title="Control Signal" text="Purple lines represent the Control Unit coordinating which component should act next." /></span>
+              <span><i className="instruction-line" /> Instruction flow <InfoTip className="inline" title="Instruction Flow" text="Blue lines represent the instruction moving from memory into the Instruction Register." /></span>
+              <span><i className="data-line" /> Data flow <InfoTip className="inline" title="Data Flow" text="Green lines represent values moving between RAM, cache, registers and the ALU." /></span>
             </div>
 
             <div className="component-map-note">
@@ -1086,6 +1097,7 @@ function App() {
                 <p className="eyebrow">Execution Feed</p>
                 <h2>Loaded Program Trace</h2>
               </div>
+              <InfoTip className="inline" title="Loaded Program Trace" text="This is the actual loaded program. The highlighted row is the line currently being processed by the CPU." />
               <span className="line-pill">{cpu.halted ? 'Program halted' : activeLineNumber ? `Line ${activeLineNumber}` : 'Ready'}</span>
             </div>
 
@@ -1109,6 +1121,7 @@ function App() {
               <p className="eyebrow">Step Explanation</p>
               <h2>{PHASE_DETAILS[activePhase].subtitle}</h2>
             </div>
+            <InfoTip className="inline" title="Step Explanation" text="Explains the active CPU phase separately from the program trace so students can connect code to hardware behavior." />
           </div>
 
           <div className="explanation-list">
@@ -1128,7 +1141,7 @@ function App() {
           </div>
 
           <section className="learn-card">
-            <h3>Pro Tip</h3>
+            <h3>Pro Tip <InfoTip className="inline" title="CPU Cycle" text="Every instruction repeats the same cycle, even when the instruction is a jump, load or arithmetic operation." /></h3>
             <p>The cycle repeats: Fetch gets the instruction, Decode understands it, Execute performs it, and Write Back saves the result.</p>
           </section>
 

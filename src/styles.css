@@ -486,7 +486,7 @@ h3 {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 8;
+  z-index: 200;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -526,6 +526,7 @@ h3 {
   text-align: left;
   transform: translateY(6px) scale(0.98);
   transition: 160ms ease;
+  z-index: 300;
 }
 
 .info-popover strong {
@@ -536,11 +537,6 @@ h3 {
   color: var(--muted);
   font-size: 0.84rem;
   font-weight: 500;
-}
-
-.info-tip.inside .info-popover {
-  top: calc(100% + 8px);
-  bottom: auto;
 }
 
 .info-tip:hover .info-popover,
@@ -1384,6 +1380,35 @@ body {
   gap: 14px;
 }
 
+.top-actions button,
+.sidebar-tabs button,
+.cpu-controls button,
+.secondary-button,
+.add-program-button,
+.load-program-button,
+.sample-button,
+.mode-toggle,
+.auto-toggle,
+.speed-select,
+.section-title,
+.flow-legend span,
+.learn-card h3,
+.tip-card strong {
+  position: relative;
+}
+
+.speed-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.speed-select > span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .top-actions > button,
 .top-actions select,
 .mode-toggle {
@@ -1401,6 +1426,43 @@ body {
 
 .mode-toggle input {
   accent-color: var(--purple);
+}
+
+.info-tip.inline,
+.info-tip.button-tip {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.info-tip.button-tip {
+  margin-left: 8px;
+}
+
+.info-tip.inline .info-dot,
+.info-tip.button-tip .info-dot {
+  width: 19px;
+  height: 19px;
+  font-size: 0.68rem;
+}
+
+.info-tip.inline .info-popover,
+.info-tip.button-tip .info-popover {
+  bottom: calc(100% + 10px);
+  right: 50%;
+  top: auto;
+  transform: translate(50%, 6px) scale(0.98);
+}
+
+.info-tip.inline:hover .info-popover,
+.info-tip.inline:focus .info-popover,
+.info-tip.inline:focus-within .info-popover,
+.info-tip.button-tip:hover .info-popover,
+.info-tip.button-tip:focus .info-popover,
+.info-tip.button-tip:focus-within .info-popover {
+  transform: translate(50%, 0) scale(1);
 }
 
 .workspace {
@@ -1565,7 +1627,20 @@ body {
 
 .cpu-panel {
   align-self: start;
+  overflow: visible;
   padding: 24px 26px;
+}
+
+.panel,
+.topbar,
+.cpu-grid,
+.cpu-block,
+.register-bank,
+.memory-card,
+.execution-feed-panel,
+.explanation-panel,
+.sidebar-panel {
+  overflow: visible;
 }
 
 .cpu-panel .panel-heading {
