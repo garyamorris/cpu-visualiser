@@ -6,16 +6,26 @@
   "scripts": {
     "dev": "node server.mjs",
     "build": "vite build",
-    "start": "node server.mjs --production"
+    "start": "node server.mjs --production",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . --max-warnings=0"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "dotenv": "latest",
-    "express": "latest",
-    "openai": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "vite": "latest"
+    "@vitejs/plugin-react": "^6.0.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^7.5.0",
+    "openai": "^6.34.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "vite": "^8.0.10"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "eslint": "^9.18.0",
+    "eslint-plugin-react": "^7.37.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "globals": "^15.14.0",
+    "vitest": "^2.1.0"
+  }
 }
